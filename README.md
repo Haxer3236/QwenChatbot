@@ -50,33 +50,51 @@ Browser
 | minikube | 1.32+ | see [minikube.sigs.k8s.io](https://minikube.sigs.k8s.io/docs/start/) |
 | kubectl | 1.28+ | `sudo snap install kubectl --classic` |
 
-> **EC2 instance recommendation:** `t3.xlarge` (4 vCPU, 16 GB RAM) or larger.  
+> **EC2 instance recommendation:** `t3.large` (2 vCPU, 8 GB RAM) minimum — `t3.xlarge` (4 vCPU, 16 GB) preferred.  
+> **Storage:** Set the root EBS volume to **30 GB** at launch (default 8 GB is not enough).  
 > Open **port 8080** in your EC2 security group for inbound TCP.
+
+### Launch checklist (AWS Console)
+
+| Setting | Value |
+|---|---|
+| AMI | Ubuntu 24.04 LTS |
+| Instance type | `t3.large` or larger |
+| Key pair | your `.pem` file |
+| Storage | **30 GB** gp3 |
+| Security group | SSH (22) + TCP 8080 from 0.0.0.0/0 |
 
 ### One-command deploy
 
 ```bash
-git clone <this-repo>
-cd chart-bot-k8s
-bash start.sh
+git clone https://github.com/Raj-pro/test-repo.git
+cd test-repo
+chmod +x start.sh
+./start.sh
 ```
 
-The script will:
-1. Install any missing tools (Docker / minikube / kubectl)
-2. Start minikube with 4 CPUs and 4 GB RAM
-3. Build both Docker images
-4. Load them into minikube
-5. Apply all Kubernetes manifests
-6. Wait for pods to become ready
-7. Start `kubectl port-forward` bound to `0.0.0.0:8080`
-8. Print the public URL
+The script auto-installs Docker, minikube, and kubectl if missing.
 
-> First run downloads the Qwen model (~1.8 GB) at **build time** — subsequent builds use Docker's layer cache.
+> **After Docker installs** the script exits and asks you to re-login.  
+> Instead of logging out, run `newgrp docker` in the same shell, then re-run `./start.sh`.
+
+The script will then:
+1. Start minikube
+2. Build both Docker images (first run downloads Qwen ~1.8 GB — takes 5–10 min)
+3. Load images into minikube
+4. Apply all Kubernetes manifests
+5. Wait for pods to become ready
+6. Start `kubectl port-forward` bound to `0.0.0.0:8080`
+7. Print the public URL
 
 ### Environment overrides
 
 ```bash
-PORT=9090 MINIKUBE_MEMORY=8192 MINIKUBE_CPUS=4 bash start.sh
+# On a 2-vCPU instance (t3.large, t3.medium):
+MINIKUBE_CPUS=2 ./start.sh
+
+# Custom port or more memory:
+PORT=9090 MINIKUBE_MEMORY=8192 MINIKUBE_CPUS=4 ./start.sh
 ```
 
 ---
@@ -166,3 +184,6 @@ minikube stop          # pause the VM
 | Port 8080 unreachable on EC2 | Security group not open | Add inbound TCP 8080 rule |
 | `image load` hangs | Large image over slow link | Be patient — ~3 GB transfer into minikube |
 | HPA shows `<unknown>` CPU | metrics-server not ready | Wait 2–3 min after `minikube addons enable metrics-server` |
+| `No space left on device` during build | EBS root volume too small (default 8 GB) | Resize volume to 30 GB in AWS Console → EC2 → Volumes → Modify Volume, then `sudo growpart /dev/xvda 1 && sudo resize2fs /dev/xvda1` |
+| `RSRC_INSUFFICIENT_CORES` on minikube start | Instance has fewer vCPUs than the default (4) | Run `MINIKUBE_CPUS=2 ./start.sh` on a 2-vCPU instance (`t3.large`), or upgrade to `t3.xlarge` (4 vCPU) to use defaults |
+| Script exits after Docker install asking to re-login | Docker group not applied to current shell | Run `newgrp docker` then `./start.sh` again — no need to log out |
