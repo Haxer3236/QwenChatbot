@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: chatbot
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: chatbot-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5001
+          env:
+            - name: MODEL_ID
+              value: "Qwen/Qwen2.5-0.5B-Instruct"
+            - name: TRANSFORMERS_OFFLINE
+              value: "1"
+            - name: HF_HOME
+              value: "/app/hf_cache"
+            - name: NUM_THREADS
+              value: "4"
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "1500Mi"
+            limits:
+              cpu: "4000m"
+              memory: "2Gi"
+          # --preload means gunicorn loads the model before binding workers,
+          # so /health won't respond until the model is fully loaded.
+          # Give it 90 s before the first probe fires.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 3
