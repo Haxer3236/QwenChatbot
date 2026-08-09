@@ -5,6 +5,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
 # App deps
+#Copy requirment file
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
