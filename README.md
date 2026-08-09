@@ -172,18 +172,3 @@ kubectl delete namespace chatbot
 minikube stop          # pause the VM
 # minikube delete      # full removal
 ```
-
----
-
-## Troubleshooting
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| `RemoteDisconnected` on first message | Backend pod not ready yet | Wait 60–90 s after deploy and retry |
-| Response cuts off early | `max_new_tokens=64` cap | Increase in `backend/app.py` and rebuild |
-| Port 8080 unreachable on EC2 | Security group not open | Add inbound TCP 8080 rule |
-| `image load` hangs | Large image over slow link | Be patient — ~3 GB transfer into minikube |
-| HPA shows `<unknown>` CPU | metrics-server not ready | Wait 2–3 min after `minikube addons enable metrics-server` |
-| `No space left on device` during build | EBS root volume too small (default 8 GB) | Resize volume to 30 GB in AWS Console → EC2 → Volumes → Modify Volume, then `sudo growpart /dev/xvda 1 && sudo resize2fs /dev/xvda1` |
-| `RSRC_INSUFFICIENT_CORES` on minikube start | Instance has fewer vCPUs than the default (4) | Run `MINIKUBE_CPUS=2 ./start.sh` on a 2-vCPU instance (`t3.large`), or upgrade to `t3.xlarge` (4 vCPU) to use defaults |
-| Script exits after Docker install asking to re-login | Docker group not applied to current shell | Run `newgrp docker` then `./start.sh` again — no need to log out |
