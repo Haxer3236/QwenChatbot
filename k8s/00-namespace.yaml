@@ -1,3 +1,4 @@
+#This the amespace file
 apiVersion: v1
 kind: Namespace
 metadata:
